@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Mutual Non-Disclosure Agreement",
+    "description": "Standard terms for a mutual NDA allowing both parties to share confidential information for a defined purpose, with reciprocal confidentiality obligations.",
+    "filename": "templates/Mutual-NDA.md"
+  },
+  {
+    "name": "Mutual Non-Disclosure Agreement Cover Page",
+    "description": "Cover page template to accompany the Mutual NDA Standard Terms, capturing party details, purpose, term, governing law, and signatures.",
+    "filename": "templates/Mutual-NDA-coverpage.md"
+  },
+  {
+    "name": "Cloud Service Agreement",
+    "description": "Comprehensive agreement for SaaS/cloud service providers and customers, covering access rights, restrictions, payment, data privacy, confidentiality, and indemnification.",
+    "filename": "templates/CSA.md"
+  },
+  {
+    "name": "Design Partner Agreement",
+    "description": "Agreement for early-access design partner programs, granting product access in exchange for feedback to help the provider develop and improve their product.",
+    "filename": "templates/design-partner-agreement.md"
+  },
+  {
+    "name": "Service Level Agreement",
+    "description": "Defines uptime and response time commitments for cloud services, including service credit calculations and remedies for failing to meet targets.",
+    "filename": "templates/sla.md"
+  },
+  {
+    "name": "Professional Services Agreement",
+    "description": "Agreement for professional services engagements covering SOW-based work, deliverable ownership, payment terms, IP rights, confidentiality, and indemnification.",
+    "filename": "templates/psa.md"
+  },
+  {
+    "name": "Data Processing Agreement",
+    "description": "GDPR-compliant data processing agreement governing how a service provider processes personal data on behalf of a customer, including SCCs for international transfers.",
+    "filename": "templates/DPA.md"
+  },
+  {
+    "name": "Partnership Agreement",
+    "description": "Standard terms for business partnerships covering mutual obligations, trademark licensing, payment, confidentiality, and liability between two companies.",
+    "filename": "templates/Partnership-Agreement.md"
+  },
+  {
+    "name": "Software License Agreement",
+    "description": "Agreement for on-premise or self-hosted software licenses, covering installation rights, restrictions, payment, warranties, and IP ownership.",
+    "filename": "templates/Software-License-Agreement.md"
+  },
+  {
+    "name": "Pilot Agreement",
+    "description": "Short-term pilot or proof-of-concept agreement granting limited product access for evaluation purposes before committing to a long-term agreement.",
+    "filename": "templates/Pilot-Agreement.md"
+  },
+  {
+    "name": "Business Associate Agreement",
+    "description": "HIPAA-compliant BAA governing how a business associate handles protected health information (PHI) on behalf of a covered entity.",
+    "filename": "templates/BAA.md"
+  },
+  {
+    "name": "AI Addendum",
+    "description": "Addendum to an existing agreement governing the use of AI/ML services, covering input/output ownership, model training restrictions, and AI-specific disclaimers.",
+    "filename": "templates/AI-Addendum.md"
+  }
+]
