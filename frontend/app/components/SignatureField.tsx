@@ -11,6 +11,18 @@ interface SignatureFieldProps {
 
 export default function SignatureField({ label, value, onChange }: SignatureFieldProps) {
   const sigRef = useRef<SignatureCanvas>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Size the canvas buffer to match its CSS dimensions so exported data URLs are full-resolution
+  useEffect(() => {
+    if (!containerRef.current || !sigRef.current) return;
+    const { width } = containerRef.current.getBoundingClientRect();
+    if (width > 0) {
+      const canvas = sigRef.current.getCanvas();
+      canvas.width = Math.round(width);
+      canvas.height = 80;
+    }
+  }, []);
 
   // When value is cleared externally, clear the canvas too
   useEffect(() => {
@@ -33,7 +45,7 @@ export default function SignatureField({ label, value, onChange }: SignatureFiel
   return (
     <div className="space-y-1">
       <label className="block text-xs font-medium text-gray-600">{label}</label>
-      <div className="border border-gray-300 rounded bg-white">
+      <div ref={containerRef} className="border border-gray-300 rounded bg-white">
         <SignatureCanvas
           ref={sigRef}
           penColor="#1e3a5f"

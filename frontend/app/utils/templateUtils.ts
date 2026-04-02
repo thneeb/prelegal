@@ -7,6 +7,12 @@ export async function loadTemplate(filename: string): Promise<string> {
   return res.text();
 }
 
+/** Sanitize a year string to a positive integer, preventing markdown injection. */
+function sanitizeYears(val: string, fallback = "1"): string {
+  const n = parseInt(val, 10);
+  return Number.isFinite(n) && n > 0 ? String(n) : fallback;
+}
+
 function formatDate(iso: string): string {
   if (!iso) return "[Date]";
   const d = new Date(iso + "T00:00:00");
@@ -19,12 +25,12 @@ function formatDate(iso: string): string {
 export function buildCoverPage(data: NdaFormData): string {
   const mndaTerm =
     data.mndaTermType === "years"
-      ? `${data.mndaTermYears || "1"} year(s) from Effective Date`
+      ? `${sanitizeYears(data.mndaTermYears)} year(s) from Effective Date`
       : "Continues until terminated in accordance with the terms of the MNDA";
 
   const confidentialityTerm =
     data.confidentialityTermType === "years"
-      ? `${data.confidentialityTermYears || "1"} year(s) from Effective Date, but in the case of trade secrets until Confidential Information is no longer considered a trade secret under applicable laws`
+      ? `${sanitizeYears(data.confidentialityTermYears)} year(s) from Effective Date, but in the case of trade secrets until Confidential Information is no longer considered a trade secret under applicable laws`
       : "In perpetuity";
 
   return `# Mutual Non-Disclosure Agreement
@@ -68,12 +74,12 @@ ${data.modifications ? `### MNDA Modifications\n\n${data.modifications}\n\n` : "
 export function fillStandardTerms(raw: string, data: NdaFormData): string {
   const mndaTerm =
     data.mndaTermType === "years"
-      ? `${data.mndaTermYears || "1"} year(s) from Effective Date`
+      ? `${sanitizeYears(data.mndaTermYears)} year(s) from Effective Date`
       : "the date of termination";
 
   const confidentialityTerm =
     data.confidentialityTermType === "years"
-      ? `${data.confidentialityTermYears || "1"} year(s) from Effective Date`
+      ? `${sanitizeYears(data.confidentialityTermYears)} year(s) from Effective Date`
       : "in perpetuity";
 
   const replacements: Record<string, string> = {
@@ -88,14 +94,15 @@ export function fillStandardTerms(raw: string, data: NdaFormData): string {
   let result = raw;
 
   // Replace <span class="coverpage_link">FieldName</span> with actual values
+  // Use [\s\S]*? to handle multi-line spans and content containing special characters
   result = result.replace(
-    /<span class="coverpage_link">([^<]+)<\/span>/g,
-    (_, field) => replacements[field] ?? field
+    /<span class="coverpage_link">([\s\S]+?)<\/span>/g,
+    (_, field) => replacements[field.trim()] ?? field.trim()
   );
 
   // Remove other span tags but keep their text content
-  result = result.replace(/<span[^>]*>([^<]*)<\/span>/g, "$1");
-  result = result.replace(/<label>[^<]*<\/label>/g, "");
+  result = result.replace(/<span[\s\S]*?>([\s\S]*?)<\/span>/g, "$1");
+  result = result.replace(/<label>[\s\S]*?<\/label>/g, "");
 
   return result;
 }

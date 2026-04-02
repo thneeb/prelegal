@@ -13,15 +13,20 @@ interface NdaFormProps {
 function Field({
   label,
   hint,
+  id,
   children,
 }: {
   label: string;
   hint?: string;
+  id?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-1">
-      <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
+      <label
+        htmlFor={id}
+        className="block text-xs font-semibold text-gray-700 uppercase tracking-wide"
+      >
         {label}
       </label>
       {hint && <p className="text-xs text-gray-400 italic">{hint}</p>}
@@ -52,8 +57,9 @@ export default function NdaForm({ data, onChange, onDownload, downloading }: Nda
     <form className="space-y-4 px-1" onSubmit={(e) => e.preventDefault()}>
       <SectionHeading title="Agreement Details" />
 
-      <Field label="Purpose" hint="How Confidential Information may be used">
+      <Field label="Purpose" hint="How Confidential Information may be used" id="purpose">
         <textarea
+          id="purpose"
           rows={2}
           className={textareaCls}
           value={data.purpose}
@@ -61,8 +67,9 @@ export default function NdaForm({ data, onChange, onDownload, downloading }: Nda
         />
       </Field>
 
-      <Field label="Effective Date">
+      <Field label="Effective Date" id="effective-date">
         <input
+          id="effective-date"
           type="date"
           className={inputCls}
           value={data.effectiveDate}
@@ -141,8 +148,9 @@ export default function NdaForm({ data, onChange, onDownload, downloading }: Nda
         </div>
       </Field>
 
-      <Field label="Governing Law">
+      <Field label="Governing Law" id="governing-law">
         <input
+          id="governing-law"
           type="text"
           placeholder="e.g. Delaware"
           className={inputCls}
@@ -151,8 +159,9 @@ export default function NdaForm({ data, onChange, onDownload, downloading }: Nda
         />
       </Field>
 
-      <Field label="Jurisdiction">
+      <Field label="Jurisdiction" id="jurisdiction">
         <input
+          id="jurisdiction"
           type="text"
           placeholder="e.g. courts located in Wilmington, DE"
           className={inputCls}
@@ -161,8 +170,9 @@ export default function NdaForm({ data, onChange, onDownload, downloading }: Nda
         />
       </Field>
 
-      <Field label="MNDA Modifications" hint="Optional — list any changes to the standard terms">
+      <Field label="MNDA Modifications" hint="Optional — list any changes to the standard terms" id="modifications">
         <textarea
+          id="modifications"
           rows={2}
           className={textareaCls}
           placeholder="None"
@@ -174,16 +184,18 @@ export default function NdaForm({ data, onChange, onDownload, downloading }: Nda
       <SectionHeading title="Party 1" />
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Print Name">
+        <Field label="Print Name" id="party1-name">
           <input
+            id="party1-name"
             type="text"
             className={inputCls}
             value={data.party1Name}
             onChange={(e) => set("party1Name", e.target.value)}
           />
         </Field>
-        <Field label="Title">
+        <Field label="Title" id="party1-title">
           <input
+            id="party1-title"
             type="text"
             className={inputCls}
             value={data.party1Title}
@@ -192,8 +204,9 @@ export default function NdaForm({ data, onChange, onDownload, downloading }: Nda
         </Field>
       </div>
 
-      <Field label="Company">
+      <Field label="Company" id="party1-company">
         <input
+          id="party1-company"
           type="text"
           className={inputCls}
           value={data.party1Company}
@@ -201,8 +214,9 @@ export default function NdaForm({ data, onChange, onDownload, downloading }: Nda
         />
       </Field>
 
-      <Field label="Notice Address">
+      <Field label="Notice Address" id="party1-notice">
         <input
+          id="party1-notice"
           type="text"
           placeholder="Email or postal address"
           className={inputCls}
@@ -211,8 +225,9 @@ export default function NdaForm({ data, onChange, onDownload, downloading }: Nda
         />
       </Field>
 
-      <Field label="Date">
+      <Field label="Date" id="party1-date">
         <input
+          id="party1-date"
           type="date"
           className={inputCls}
           value={data.party1Date}
@@ -229,16 +244,18 @@ export default function NdaForm({ data, onChange, onDownload, downloading }: Nda
       <SectionHeading title="Party 2" />
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Print Name">
+        <Field label="Print Name" id="party2-name">
           <input
+            id="party2-name"
             type="text"
             className={inputCls}
             value={data.party2Name}
             onChange={(e) => set("party2Name", e.target.value)}
           />
         </Field>
-        <Field label="Title">
+        <Field label="Title" id="party2-title">
           <input
+            id="party2-title"
             type="text"
             className={inputCls}
             value={data.party2Title}
@@ -247,8 +264,9 @@ export default function NdaForm({ data, onChange, onDownload, downloading }: Nda
         </Field>
       </div>
 
-      <Field label="Company">
+      <Field label="Company" id="party2-company">
         <input
+          id="party2-company"
           type="text"
           className={inputCls}
           value={data.party2Company}
@@ -256,8 +274,9 @@ export default function NdaForm({ data, onChange, onDownload, downloading }: Nda
         />
       </Field>
 
-      <Field label="Notice Address">
+      <Field label="Notice Address" id="party2-notice">
         <input
+          id="party2-notice"
           type="text"
           placeholder="Email or postal address"
           className={inputCls}
@@ -266,8 +285,9 @@ export default function NdaForm({ data, onChange, onDownload, downloading }: Nda
         />
       </Field>
 
-      <Field label="Date">
+      <Field label="Date" id="party2-date">
         <input
+          id="party2-date"
           type="date"
           className={inputCls}
           value={data.party2Date}
