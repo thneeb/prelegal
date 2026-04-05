@@ -36,6 +36,9 @@ env/
 .next/
 out/
 node_modules/
+
+# Backend generated static files (built from frontend/out at deploy time)
+backend/static/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
