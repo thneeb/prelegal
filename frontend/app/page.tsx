@@ -1,21 +1,22 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import NdaCreatorClient from "./components/NdaCreatorClient";
 
 export default function Home() {
   const router = useRouter();
+  const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
-    if (!localStorage.getItem("prelegal_user")) {
-      router.replace("/login");
+    if (localStorage.getItem("prelegal_user")) {
+      setAuthenticated(true);
+    } else {
+      router.replace("/login/");
     }
   }, [router]);
 
-  if (typeof window !== "undefined" && !localStorage.getItem("prelegal_user")) {
-    return null;
-  }
+  if (!authenticated) return null;
 
   return <NdaCreatorClient />;
 }

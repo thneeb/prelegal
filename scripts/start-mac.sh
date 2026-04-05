@@ -17,7 +17,7 @@ if ! docker info &>/dev/null; then
 fi
 
 echo "Building and starting Prelegal..."
-docker compose up --build -d
+docker-compose up --build -d
 
 echo ""
 echo "Prelegal is running at http://localhost:8000"

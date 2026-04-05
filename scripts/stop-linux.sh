@@ -7,6 +7,6 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 echo "Stopping Prelegal..."
-docker compose down
+docker-compose down
 
 echo "Prelegal stopped."
