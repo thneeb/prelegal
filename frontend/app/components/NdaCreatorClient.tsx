@@ -3,14 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { NdaFormData, defaultFormData } from "../types/nda";
 import { buildFullDocument, loadTemplate } from "../utils/templateUtils";
+import NdaChat from "./NdaChat";
 import NdaForm from "./NdaForm";
 import NdaPreview from "./NdaPreview";
+import TabSwitcher from "./TabSwitcher";
 
 export default function NdaCreatorClient() {
   const [formData, setFormData] = useState<NdaFormData>(defaultFormData);
   const [standardTermsRaw, setStandardTermsRaw] = useState<string>("");
   const [markdown, setMarkdown] = useState<string>("");
   const [downloading, setDownloading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"chat" | "form">("chat");
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Load the standard terms once on mount
@@ -74,21 +77,35 @@ export default function NdaCreatorClient() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
-      {/* Left panel — form */}
+      {/* Left panel */}
       <aside className="w-96 min-w-80 flex-shrink-0 flex flex-col bg-white shadow-lg border-r border-gray-200 z-10">
         {/* Header */}
         <div className="px-5 py-4 border-b border-gray-200 bg-blue-900">
           <h1 className="text-lg font-bold text-white">Mutual NDA Creator</h1>
-          <p className="text-xs text-blue-200 mt-0.5">Fill in the details to generate your NDA</p>
+          <p className="text-xs text-blue-200 mt-0.5">Chat with AI to fill your NDA</p>
         </div>
-        {/* Scrollable form */}
-        <div className="flex-1 overflow-y-auto px-4 py-4">
-          <NdaForm
-            data={formData}
-            onChange={setFormData}
-            onDownload={handleDownload}
-            downloading={downloading}
-          />
+
+        {/* Tab switcher */}
+        <TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
+
+        {/* Tab content — both always mounted to preserve canvas state */}
+        <div className="flex-1 overflow-hidden relative">
+          <div className={activeTab === "chat" ? "absolute inset-0 flex flex-col" : "hidden"}>
+            <NdaChat
+              formData={formData}
+              onChange={setFormData}
+              onDownload={handleDownload}
+              downloading={downloading}
+            />
+          </div>
+          <div className={activeTab === "form" ? "absolute inset-0 overflow-y-auto px-4 py-4" : "hidden"}>
+            <NdaForm
+              data={formData}
+              onChange={setFormData}
+              onDownload={handleDownload}
+              downloading={downloading}
+            />
+          </div>
         </div>
       </aside>
 
