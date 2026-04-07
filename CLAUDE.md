@@ -8,7 +8,7 @@ The available documents are covered in the catalog.json file in the project root
 
 @catalog.json
 
-The current implementation has a V1 technical foundation (PL-4) with a fake login screen. No AI chat, multi-document support, or real authentication has been built yet.
+The current implementation (PL-5) has AI chat for the Mutual NDA Creator with a tab switcher (Chat / Form). Multi-document support and real authentication have not been built yet.
 
 ## Development process
 
@@ -63,3 +63,11 @@ Backend available at http://localhost:8000
 - **Docker**: Multi-stage `Dockerfile` — Stage 1 builds the Next.js `out/` directory; Stage 2 copies it into `backend/static/` and runs uvicorn. `docker-compose.yml` exposes port 8000 and mounts a named volume for the SQLite database. Use `docker-compose` (hyphen) — the `docker compose` plugin is not installed.
 - **Scripts**: `scripts/start-*.sh` / `stop-*.sh` for Mac and Linux; `scripts/start-windows.ps1` / `stop-windows.ps1` for Windows. All wrap `docker-compose up --build -d` / `docker-compose down`.
 - **Running locally without Docker**: `cd backend && DB_PATH=/tmp/prelegal.db uv run uvicorn main:app --host 0.0.0.0 --port 8000` (requires `backend/static/` to be populated by copying `frontend/out/`).
+
+### PL-5 — AI Chat for Mutual NDA (merged 2026-04-07)
+
+- **Backend** (`backend/chat.py`): `POST /api/chat` endpoint using LiteLLM + OpenRouter + Cerebras (`openrouter/openai/gpt-oss-120b`) with Pydantic structured outputs. `next_question()` handles deterministic flow control — appends the next unanswered field question if the LLM reply omits it. Signatures are stripped from the context sent to the LLM.
+- **Frontend**: Tab switcher (Chat / Form) with CSS hide/show to preserve `react-signature-canvas` refs. `NdaChat` component manages conversation state and applies `field_updates` directly to form state. `ChatInput` restores focus via `useEffect` on the `disabled` prop transition.
+- **PDF**: `html-to-image` replaces `html2canvas` (fixes `lab()` CSS color parse error). Two separate refs (`previewRef`, `standardTermsRef`) in `NdaPreview` allow forced page breaks between cover page and standard terms. 36pt margins.
+- **Auth**: Logout button clears `localStorage` and redirects to `/login/`.
+- **Tests**: `backend/test_chat.py` (12 tests); `frontend/__tests__/ChatInput.test.tsx` (5 tests); Jest multi-project config (node/jsdom).
