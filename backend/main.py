@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from chat import router as chat_router
+from selection import router as selection_router
 from database import init_db
 
 load_dotenv()
@@ -31,6 +32,7 @@ app.add_middleware(
 )
 
 app.include_router(chat_router)
+app.include_router(selection_router)
 
 
 class LoginRequest(BaseModel):

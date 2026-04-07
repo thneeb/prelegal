@@ -1,25 +1,23 @@
-import { ChatMessage, NdaFormData } from "../types/nda";
-
-interface ChatApiRequest {
-  messages: ChatMessage[];
-  current_fields: Partial<NdaFormData>;
-}
+import { ChatMessage } from "../types/nda";
 
 export interface ChatApiResponse {
   reply: string;
-  field_updates: Partial<NdaFormData>;
+  field_updates: Record<string, string>;
 }
 
 export async function sendChatMessage(
   messages: ChatMessage[],
-  currentFields: Partial<NdaFormData>
+  currentFields: Record<string, string>,
+  documentType: string = "mnda"
 ): Promise<ChatApiResponse> {
-  const body: ChatApiRequest = { messages, current_fields: currentFields };
-
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      messages,
+      current_fields: currentFields,
+      document_type: documentType,
+    }),
   });
 
   if (!res.ok) {
