@@ -11,32 +11,57 @@ EXTRA_BODY = {"provider": {"order": ["Cerebras"]}}
 
 SYSTEM_PROMPT = """You are a friendly legal assistant helping users fill out a Mutual Non-Disclosure Agreement (MNDA).
 
-Your job is to collect all necessary information through natural conversation. Ask for one piece of information at a time. Be brief and professional.
+Your job is to extract field values from the user's messages and confirm what you understood. Keep replies brief and natural.
 
-The fields you need to collect are:
-- purpose: How confidential information may be used between the two parties
-- effectiveDate: The date the agreement starts (return in YYYY-MM-DD format)
-- mndaTermType: Either "years" (expires after N years) or "until_terminated" (continues until terminated)
-- mndaTermYears: Number of years as a string (only if mndaTermType is "years")
-- confidentialityTermType: Either "years" or "perpetual"
-- confidentialityTermYears: Number of years as a string (only if confidentialityTermType is "years")
-- governingLaw: The US state whose laws govern the agreement (e.g., "Delaware")
-- jurisdiction: The courts where disputes are resolved (e.g., "courts located in Wilmington, DE")
-- modifications: Any modifications to the standard NDA terms (optional, leave null if none)
-- party1Name, party1Title, party1Company, party1NoticeAddress, party1Date: First party details (date in YYYY-MM-DD)
-- party2Name, party2Title, party2Company, party2NoticeAddress, party2Date: Second party details (date in YYYY-MM-DD)
-
-Rules:
-- Only populate field_updates with values the user has explicitly provided in this conversation
-- Set fields to null if the user has not provided them yet
+Field value rules:
+- Only populate field_updates with values the user has explicitly provided
 - Never invent or assume values
-- For dates, convert natural language to YYYY-MM-DD format (e.g., "today" → today's date)
+- Dates must be YYYY-MM-DD (convert natural language: "today", "next Monday", etc.)
 - mndaTermType must be exactly "years" or "until_terminated"
 - confidentialityTermType must be exactly "years" or "perpetual"
 - Year counts must be numeric strings (e.g., "2")
-- Do not ask about signatures — those are handled separately in the UI
-- Confirm extracted values conversationally (e.g., "Got it — I'll set the governing law to Delaware.")
-- When a field is already filled in the current fields context, do not re-ask for it unless the user wants to change it"""
+- Do not ask about signatures — handled separately in the UI
+- When a field is already filled in the current fields context, do not re-ask for it"""
+
+# Ordered list of (field, question) pairs.
+# None question = conditional field handled separately in next_question().
+FIELD_QUESTIONS: list[tuple[str, Optional[str]]] = [
+    ("purpose", "What is the purpose of this agreement — how will confidential information be used?"),
+    ("effectiveDate", "What date should this agreement be effective from?"),
+    ("mndaTermType", "How long should this agreement last — a specific number of years, or until terminated?"),
+    ("mndaTermYears", None),  # asked only when mndaTermType == "years"
+    ("confidentialityTermType", "How long should confidentiality obligations last — a specific number of years, or in perpetuity?"),
+    ("confidentialityTermYears", None),  # asked only when confidentialityTermType == "years"
+    ("governingLaw", "Which US state's laws should govern this agreement?"),
+    ("jurisdiction", "Which courts should handle any disputes (e.g. 'courts located in Wilmington, DE')?"),
+    ("party1Name", "What is the full name of the first party signing this agreement?"),
+    ("party1Title", "What is Party 1's title or position?"),
+    ("party1Company", "What company does Party 1 represent?"),
+    ("party1NoticeAddress", "What is the notice address for Party 1 (email or postal)?"),
+    ("party1Date", "What date will Party 1 sign?"),
+    ("party2Name", "What is the full name of the second party signing?"),
+    ("party2Title", "What is Party 2's title or position?"),
+    ("party2Company", "What company does Party 2 represent?"),
+    ("party2NoticeAddress", "What is the notice address for Party 2?"),
+    ("party2Date", "What date will Party 2 sign?"),
+    ("modifications", "Are there any modifications to the standard NDA terms, or shall we use them as-is?"),
+]
+
+
+def next_question(fields: dict) -> Optional[str]:
+    """Return the question for the next unfilled field, or None if all are complete."""
+    for field, question in FIELD_QUESTIONS:
+        if field == "mndaTermYears":
+            if fields.get("mndaTermType") == "years" and not fields.get("mndaTermYears"):
+                return "How many years should this agreement last?"
+            continue
+        if field == "confidentialityTermYears":
+            if fields.get("confidentialityTermType") == "years" and not fields.get("confidentialityTermYears"):
+                return "How many years should the confidentiality obligation last?"
+            continue
+        if not fields.get(field):
+            return question
+    return None
 
 
 class NdaFieldUpdates(BaseModel):
@@ -129,4 +154,15 @@ async def chat_endpoint(body: ChatRequest):
     # Only return non-null field updates
     field_updates = {k: v for k, v in result.field_updates.model_dump().items() if v is not None}
 
-    return ChatResponse(reply=result.reply, field_updates=field_updates)
+    # Guarantee the reply always ends with the next question.
+    # The LLM handles natural language understanding; we handle flow control.
+    reply = result.reply.rstrip()
+    if not reply.endswith("?"):
+        all_fields = {**safe_fields, **field_updates}
+        nq = next_question(all_fields)
+        if nq:
+            reply = reply + " " + nq
+        else:
+            reply = reply + " Your NDA is complete — you can now download the PDF!"
+
+    return ChatResponse(reply=reply, field_updates=field_updates)

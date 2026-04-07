@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -9,6 +9,13 @@ interface ChatInputProps {
 
 export default function ChatInput({ onSend, disabled }: ChatInputProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
+
+  // Restore focus when the textarea is re-enabled after a loading state
+  useEffect(() => {
+    if (!disabled) {
+      ref.current?.focus();
+    }
+  }, [disabled]);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -22,6 +29,7 @@ export default function ChatInput({ onSend, disabled }: ChatInputProps) {
     if (!text || disabled) return;
     ref.current!.value = "";
     onSend(text);
+    ref.current?.focus();
   }
 
   return (

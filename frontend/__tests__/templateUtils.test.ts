@@ -205,7 +205,8 @@ Other <span class="header_2" id="1">Section Header</span> text.
 // ─── buildFullDocument ────────────────────────────────────────────────────────
 
 describe("buildFullDocument", () => {
-  const minimalTemplate = `Standard Terms body with <span class="coverpage_link">Purpose</span>.`;
+  // The real Mutual-NDA.md starts with "# Standard Terms" — the template must include it
+  const minimalTemplate = `# Standard Terms\n\nStandard Terms body with <span class="coverpage_link">Purpose</span>.`;
 
   it("contains the cover page title", () => {
     const doc = buildFullDocument(minimalTemplate, base());

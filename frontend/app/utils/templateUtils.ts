@@ -113,5 +113,6 @@ export function fillStandardTerms(raw: string, data: NdaFormData): string {
 export function buildFullDocument(standardTermsRaw: string, data: NdaFormData): string {
   const coverPage = buildCoverPage(data);
   const standardTerms = fillStandardTerms(standardTermsRaw, data);
-  return coverPage + "\n\n---\n\n# Standard Terms\n\n" + standardTerms;
+  // coverPage already ends with "---\n"; standardTerms already starts with "# Standard Terms"
+  return coverPage + "\n" + standardTerms;
 }
