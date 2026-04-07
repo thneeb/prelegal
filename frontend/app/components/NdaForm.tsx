@@ -306,7 +306,8 @@ export default function NdaForm({ data, onChange, onDownload, downloading }: Nda
           type="button"
           onClick={onDownload}
           disabled={downloading}
-          className="w-full rounded bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 active:bg-blue-900 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full rounded px-4 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          style={{ backgroundColor: "#753991" }}
         >
           {downloading ? (
             <>

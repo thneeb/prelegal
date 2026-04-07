@@ -1,3 +1,8 @@
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export interface NdaFormData {
   // Purpose & dates
   purpose: string;
