@@ -86,10 +86,14 @@ export const DOCUMENT_CONFIGS: Record<string, DocumentConfig> = {
     templateFields: [
       { field: "party1Company", placeholder: "Provider", placeholderClass: "coverpage_link" },
       { field: "party2Company", placeholder: "Customer", placeholderClass: "coverpage_link" },
+      { field: "effectiveDate", placeholder: "Effective Date", placeholderClass: null },
+      { field: "agreement", placeholder: "Agreement", placeholderClass: null },
       { field: "trainingData", placeholder: "Training Data", placeholderClass: "coverpage_link" },
       { field: "trainingPurposes", placeholder: "Training Purposes", placeholderClass: "coverpage_link" },
       { field: "improvementRestrictions", placeholder: "Improvement Restrictions", placeholderClass: "coverpage_link" },
       { field: "trainingRestrictions", placeholder: "Training Restrictions", placeholderClass: "coverpage_link" },
+      { field: "governingLaw", placeholder: "Governing Law", placeholderClass: null },
+      { field: "chosenCourts", placeholder: "Chosen Courts", placeholderClass: null },
       ...partyFields("Provider", "Customer"),
     ],
     hasFormTab: false,
@@ -181,6 +185,7 @@ export const DOCUMENT_CONFIGS: Record<string, DocumentConfig> = {
     templateFields: [
       { field: "party1Company", placeholder: "Provider", placeholderClass: "keyterms_link" },
       { field: "party2Company", placeholder: "Customer", placeholderClass: "keyterms_link" },
+      { field: "effectiveDate", placeholder: "Effective Date", placeholderClass: null },
       { field: "agreement", placeholder: "Agreement", placeholderClass: "keyterms_link" },
       { field: "natureAndPurpose", placeholder: "Nature and Purpose of Processing", placeholderClass: "keyterms_link" },
       { field: "categoriesOfPersonalData", placeholder: "Categories of Personal Data", placeholderClass: "keyterms_link" },
