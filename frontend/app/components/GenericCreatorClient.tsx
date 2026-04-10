@@ -10,6 +10,8 @@ import {
   loadTemplate,
 } from "../utils/templateUtils";
 import { sendChatMessage } from "../utils/chatApi";
+import { clearAuth } from "../utils/authUtils";
+import { saveDocument } from "../utils/historyApi";
 import ChatInput from "./ChatInput";
 import ChatMessageBubble from "./ChatMessage";
 import ChatSignatures from "./ChatSignatures";
@@ -19,11 +21,12 @@ const PDF_MARGIN = 36; // pt (0.5 inch)
 
 interface GenericCreatorClientProps {
   config: DocumentConfig;
+  initialFormData?: GenericFormData;
 }
 
-export default function GenericCreatorClient({ config }: GenericCreatorClientProps) {
+export default function GenericCreatorClient({ config, initialFormData }: GenericCreatorClientProps) {
   const router = useRouter();
-  const [formData, setFormData] = useState<GenericFormData>({});
+  const [formData, setFormData] = useState<GenericFormData>(initialFormData ?? {});
   const [standardTermsRaw, setStandardTermsRaw] = useState<string>("");
   const [coverMarkdown, setCoverMarkdown] = useState<string>("");
   const [standardTermsMarkdown, setStandardTermsMarkdown] = useState<string>("");
@@ -41,8 +44,7 @@ export default function GenericCreatorClient({ config }: GenericCreatorClientPro
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   function handleLogout() {
-    localStorage.removeItem("prelegal_user");
-    localStorage.removeItem("prelegal_selected_doc");
+    clearAuth();
     router.replace("/login/");
   }
 
@@ -136,6 +138,11 @@ export default function GenericCreatorClient({ config }: GenericCreatorClientPro
         .replace(/[^a-zA-Z0-9._-]/g, "_")
         .replace(/_+/g, "_");
       pdf.save(filename);
+
+      // Save to history (fire-and-forget — PDF download must not be blocked)
+      const { party1Signature: _s1, party2Signature: _s2, ...historyFields } = formData;
+      const docName = `${config.name}: ${p1} / ${p2}`;
+      saveDocument(config.id, docName, historyFields).catch(console.error);
     } catch (err) {
       console.error("PDF generation failed:", err);
       alert("PDF generation failed. Please try again.");
@@ -169,13 +176,22 @@ export default function GenericCreatorClient({ config }: GenericCreatorClientPro
               Chat with AI to fill your document
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="text-xs text-blue-300 hover:text-white transition-colors flex-shrink-0"
-          >
-            Log out
-          </button>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => router.push("/history/")}
+              className="text-xs text-blue-300 hover:text-white transition-colors"
+            >
+              History
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="text-xs text-blue-300 hover:text-white transition-colors"
+            >
+              Log out
+            </button>
+          </div>
         </div>
 
         {/* Chat messages */}

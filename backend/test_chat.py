@@ -5,12 +5,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-os.environ.setdefault("OPENROUTER_API_KEY", "test-key")
-
+from auth import create_token  # noqa: E402
 from chat import next_question  # noqa: E402
 from main import app  # noqa: E402
 
 client = TestClient(app)
+
+# Valid JWT for protected endpoint tests (no real user needed — auth only checks the token)
+_AUTH = {"Authorization": f"Bearer {create_token(1, 'test@test.com', 'Test')}"}
 
 
 def make_llm_response(reply: str, field_updates: dict) -> MagicMock:
@@ -114,6 +116,7 @@ def test_reply_gets_next_question_appended_when_ai_omits_it(mock_completion):
             "messages": [{"role": "user", "content": "Testing"}],
             "current_fields": {},
         },
+        headers=_AUTH,
     )
 
     assert response.status_code == 200
@@ -135,6 +138,7 @@ def test_reply_not_modified_when_ai_already_asks_question(mock_completion):
             "messages": [{"role": "user", "content": "Testing"}],
             "current_fields": {},
         },
+        headers=_AUTH,
     )
 
     assert response.status_code == 200
@@ -166,6 +170,7 @@ def test_reply_signals_completion_when_all_fields_filled(mock_completion):
             "messages": [{"role": "user", "content": "No changes"}],
             "current_fields": all_fields,
         },
+        headers=_AUTH,
     )
 
     assert response.status_code == 200
@@ -183,6 +188,7 @@ def test_chat_filters_null_field_updates(mock_completion):
     response = client.post(
         "/api/chat",
         json={"messages": [{"role": "user", "content": "Testing"}], "current_fields": {}},
+        headers=_AUTH,
     )
 
     assert response.status_code == 200
@@ -204,6 +210,7 @@ def test_chat_strips_signatures_from_current_fields(mock_completion):
                 "governingLaw": "California",
             },
         },
+        headers=_AUTH,
     )
 
     _, kwargs = mock_completion.call_args
@@ -219,6 +226,7 @@ def test_chat_returns_502_on_llm_error(mock_completion):
     response = client.post(
         "/api/chat",
         json={"messages": [{"role": "user", "content": "Hi"}], "current_fields": {}},
+        headers=_AUTH,
     )
 
     assert response.status_code == 502
@@ -231,6 +239,7 @@ def test_chat_returns_500_when_api_key_missing(monkeypatch):
     response = client.post(
         "/api/chat",
         json={"messages": [{"role": "user", "content": "Hi"}], "current_fields": {}},
+        headers=_AUTH,
     )
 
     assert response.status_code == 500

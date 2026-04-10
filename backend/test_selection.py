@@ -5,12 +5,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-os.environ.setdefault("OPENROUTER_API_KEY", "test-key")
-
+from auth import create_token  # noqa: E402
 from document_configs import DOCUMENT_CONFIGS  # noqa: E402
 from main import app  # noqa: E402
 
 client = TestClient(app)
+
+_AUTH = {"Authorization": f"Bearer {create_token(1, 'test@test.com', 'Test')}"}
 
 
 # ── document_configs unit tests ───────────────────────────────────────────────
@@ -79,6 +80,7 @@ def test_generic_chat_returns_field_updates(mock_completion):
             "current_fields": {},
             "document_type": "csa",
         },
+        headers=_AUTH,
     )
 
     assert response.status_code == 200
@@ -100,6 +102,7 @@ def test_generic_chat_appends_next_question(mock_completion):
             "current_fields": {},
             "document_type": "pilot",
         },
+        headers=_AUTH,
     )
 
     assert response.status_code == 200
@@ -126,6 +129,7 @@ def test_generic_chat_signals_completion(mock_completion):
             "current_fields": all_fields,
             "document_type": "pilot",
         },
+        headers=_AUTH,
     )
 
     assert response.status_code == 200
@@ -141,6 +145,7 @@ def test_generic_chat_returns_400_for_unknown_doc_type():
             "current_fields": {},
             "document_type": "unknown-doc-xyz",
         },
+        headers=_AUTH,
     )
     assert response.status_code == 400
 
@@ -165,6 +170,7 @@ def test_selection_returns_document_id(mock_completion):
     response = client.post(
         "/api/select-document",
         json={"messages": [{"role": "user", "content": "I need an NDA"}]},
+        headers=_AUTH,
     )
 
     assert response.status_code == 200
@@ -183,6 +189,7 @@ def test_selection_returns_null_when_no_selection(mock_completion):
     response = client.post(
         "/api/select-document",
         json={"messages": [{"role": "user", "content": "Help me"}]},
+        headers=_AUTH,
     )
 
     assert response.status_code == 200
@@ -200,6 +207,7 @@ def test_selection_rejects_invalid_document_id(mock_completion):
     response = client.post(
         "/api/select-document",
         json={"messages": [{"role": "user", "content": "I need a lease"}]},
+        headers=_AUTH,
     )
 
     assert response.status_code == 200
@@ -213,6 +221,7 @@ def test_selection_returns_502_on_llm_error(mock_completion):
     response = client.post(
         "/api/select-document",
         json={"messages": [{"role": "user", "content": "hi"}]},
+        headers=_AUTH,
     )
 
     assert response.status_code == 502

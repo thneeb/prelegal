@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChatMessage } from "../types/nda";
 import { DOCUMENT_CONFIGS } from "../document_configs";
 import { sendSelectionMessage } from "../utils/selectionApi";
+import { clearAuth } from "../utils/authUtils";
 import ChatInput from "./ChatInput";
 import ChatMessageBubble from "./ChatMessage";
 import DocumentCard from "./DocumentCard";
@@ -34,7 +35,7 @@ export default function DocumentSelector() {
   }, []);
 
   function handleLogout() {
-    localStorage.removeItem("prelegal_user");
+    clearAuth();
     router.replace("/login/");
   }
 
@@ -86,13 +87,22 @@ export default function DocumentSelector() {
               AI-powered legal document creator
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="text-xs text-blue-300 hover:text-white transition-colors"
-          >
-            Log out
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => router.push("/history/")}
+              className="text-xs text-blue-300 hover:text-white transition-colors"
+            >
+              History
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="text-xs text-blue-300 hover:text-white transition-colors"
+            >
+              Log out
+            </button>
+          </div>
         </div>
 
         {/* Chat messages */}

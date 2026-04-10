@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import DocumentSelector from "./components/DocumentSelector";
+import { isAuthenticated } from "./utils/authUtils";
 
 export default function Home() {
   const router = useRouter();
   const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem("prelegal_user")) {
+    if (isAuthenticated()) {
       setAuthenticated(true);
     } else {
       router.replace("/login/");

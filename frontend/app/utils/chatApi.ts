@@ -1,4 +1,5 @@
 import { ChatMessage } from "../types/nda";
+import { clearAuth, getAuthHeaders } from "./authUtils";
 
 export interface ChatApiResponse {
   reply: string;
@@ -12,7 +13,7 @@ export async function sendChatMessage(
 ): Promise<ChatApiResponse> {
   const res = await fetch("/api/chat", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify({
       messages,
       current_fields: currentFields,
@@ -20,6 +21,11 @@ export async function sendChatMessage(
     }),
   });
 
+  if (res.status === 401) {
+    clearAuth();
+    window.location.href = "/login/";
+    throw new Error("Session expired. Please sign in again.");
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Unknown error" }));
     throw new Error(err.detail || `HTTP ${res.status}`);
