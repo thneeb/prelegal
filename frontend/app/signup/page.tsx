@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { isAuthenticated, setToken } from "../utils/authUtils";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -23,17 +25,21 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setLoading(true);
     try {
-      const res = await fetch("/api/login", {
+      const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, email, password }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.detail || "Sign in failed. Please try again.");
+        setError(data.detail || "Sign up failed. Please try again.");
         return;
       }
       setToken(data.token, data.email);
@@ -69,7 +75,7 @@ export default function LoginPage() {
             className="text-xl font-semibold mb-6"
             style={{ color: "#032147" }}
           >
-            Sign in to your account
+            Create an account
           </h2>
 
           {error && (
@@ -86,6 +92,26 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "#032147" }}
+              >
+                Full name
+              </label>
+              <input
+                id="name"
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Jane Smith"
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:border-transparent"
+                style={{ "--tw-ring-color": "#209dd7" } as React.CSSProperties}
+              />
+            </div>
+
             <div>
               <label
                 htmlFor="email"
@@ -118,8 +144,32 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 required
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:border-transparent"
+                style={{ "--tw-ring-color": "#209dd7" } as React.CSSProperties}
+              />
+              <p className="mt-1 text-xs" style={{ color: "#888888" }}>
+                Minimum 8 characters
+              </p>
+            </div>
+
+            <div>
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "#032147" }}
+              >
+                Confirm password
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:border-transparent"
                 style={{ "--tw-ring-color": "#209dd7" } as React.CSSProperties}
@@ -132,18 +182,18 @@ export default function LoginPage() {
               className="w-full py-2.5 px-4 rounded-lg text-white text-sm font-semibold transition-opacity disabled:opacity-60"
               style={{ backgroundColor: "#753991" }}
             >
-              {loading ? "Signing in…" : "Sign in"}
+              {loading ? "Creating account…" : "Create account"}
             </button>
           </form>
 
           <p className="mt-6 text-center text-xs" style={{ color: "#888888" }}>
-            Don&apos;t have an account?{" "}
+            Already have an account?{" "}
             <Link
-              href="/signup/"
+              href="/login/"
               className="font-medium"
               style={{ color: "#209dd7" }}
             >
-              Create an account
+              Sign in
             </Link>
           </p>
         </div>

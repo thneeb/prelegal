@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import NdaCreatorClient from "./components/NdaCreatorClient";
+import DocumentSelector from "./components/DocumentSelector";
+import { isAuthenticated } from "./utils/authUtils";
 
 export default function Home() {
   const router = useRouter();
   const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem("prelegal_user")) {
+    if (isAuthenticated()) {
       setAuthenticated(true);
     } else {
       router.replace("/login/");
@@ -18,5 +19,5 @@ export default function Home() {
 
   if (!authenticated) return null;
 
-  return <NdaCreatorClient />;
+  return <DocumentSelector />;
 }

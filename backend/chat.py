@@ -6,10 +6,14 @@ from fastapi import APIRouter, HTTPException
 from litellm import completion
 from pydantic import BaseModel
 
+from document_configs import DOCUMENT_CONFIGS, FieldQuestion
+
 MODEL = "openrouter/openai/gpt-oss-120b"
 EXTRA_BODY = {"provider": {"order": ["Cerebras"]}}
 
-SYSTEM_PROMPT = """You are a friendly legal assistant helping users fill out a Mutual Non-Disclosure Agreement (MNDA).
+# ─── MNDA (kept as-is for backward compatibility with existing tests) ─────────
+
+MNDA_SYSTEM_PROMPT = """You are a friendly legal assistant helping users fill out a Mutual Non-Disclosure Agreement (MNDA).
 
 Your job is to extract field values from the user's messages and confirm what you understood. Keep replies brief and natural.
 
@@ -49,7 +53,7 @@ FIELD_QUESTIONS: list[tuple[str, Optional[str]]] = [
 
 
 def next_question(fields: dict) -> Optional[str]:
-    """Return the question for the next unfilled field, or None if all are complete."""
+    """Return the question for the next unfilled MNDA field, or None if all are complete."""
     for field, question in FIELD_QUESTIONS:
         if field == "mndaTermYears":
             if fields.get("mndaTermType") == "years" and not fields.get("mndaTermYears"):
@@ -91,6 +95,36 @@ class LLMResponse(BaseModel):
     field_updates: NdaFieldUpdates
 
 
+# ─── Generic document helpers ─────────────────────────────────────────────────
+
+GENERIC_SYSTEM_PROMPT_TEMPLATE = """You are a friendly legal assistant helping users fill out a {doc_name}.
+
+{system_context}
+
+Your job is to extract field values from the user's messages and confirm what you understood. Keep replies brief and natural.
+
+Field value rules:
+- Only populate field_updates with values the user has explicitly provided
+- Never invent or assume values
+- Dates must be YYYY-MM-DD (convert natural language: "today", "next Monday", etc.)
+- Do not ask about signatures — handled separately in the UI
+- When a field is already filled in the current fields context, do not re-ask for it"""
+
+
+def next_question_for_doc(fields: dict, field_questions: list[FieldQuestion]) -> Optional[str]:
+    """Return the next unfilled field question for a generic document config."""
+    for fq in field_questions:
+        if fq.condition_field:
+            if fields.get(fq.condition_field) == fq.condition_value and not fields.get(fq.field_name):
+                return fq.question
+            continue
+        if not fields.get(fq.field_name):
+            return fq.question
+    return None
+
+
+# ─── Shared request/response models ──────────────────────────────────────────
+
 class ChatMessageModel(BaseModel):
     role: str
     content: str
@@ -99,6 +133,7 @@ class ChatMessageModel(BaseModel):
 class ChatRequest(BaseModel):
     messages: list[ChatMessageModel]
     current_fields: dict
+    document_type: str = "mnda"
 
 
 class ChatResponse(BaseModel):
@@ -115,6 +150,8 @@ async def chat_endpoint(body: ChatRequest):
     if not api_key:
         raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not configured")
 
+    doc_type = body.document_type or "mnda"
+
     # Strip signatures from current_fields — large base64 strings the AI can't use
     safe_fields = {
         k: v
@@ -122,47 +159,97 @@ async def chat_endpoint(body: ChatRequest):
         if k not in ("party1Signature", "party2Signature")
     }
 
-    llm_messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {
-            "role": "system",
-            "content": (
-                "Current NDA field values (already filled in — do not re-ask for these "
-                "unless the user wants to change them):\n"
-                + json.dumps(safe_fields, indent=2)
-            ),
-        },
-    ] + [{"role": m.role, "content": m.content} for m in body.messages[-20:]]
+    if doc_type == "mnda":
+        # ── MNDA: existing code path ──────────────────────────────────────────
+        system_prompt = MNDA_SYSTEM_PROMPT
+        llm_response_model = LLMResponse
+        fields_context_label = "Current NDA field values"
+        completion_msg = "Your NDA is complete — you can now download the PDF!"
 
-    try:
-        response = completion(
-            model=MODEL,
-            messages=llm_messages,
-            response_format=LLMResponse,
-            extra_body=EXTRA_BODY,
-            api_key=api_key,
+        llm_messages = [
+            {"role": "system", "content": system_prompt},
+            {
+                "role": "system",
+                "content": (
+                    f"{fields_context_label} (already filled in — do not re-ask for these "
+                    "unless the user wants to change them):\n"
+                    + json.dumps(safe_fields, indent=2)
+                ),
+            },
+        ] + [{"role": m.role, "content": m.content} for m in body.messages[-20:]]
+
+        try:
+            response = completion(
+                model=MODEL,
+                messages=llm_messages,
+                response_format=llm_response_model,
+                extra_body=EXTRA_BODY,
+                api_key=api_key,
+            )
+            raw = response.choices[0].message.content.strip()
+            if raw.startswith("```"):
+                parts = raw.split("```")
+                raw = parts[1].lstrip("json").strip() if len(parts) > 1 else raw
+            result = LLMResponse.model_validate_json(raw)
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"AI service error: {str(e)}")
+
+        field_updates = {k: v for k, v in result.field_updates.model_dump().items() if v is not None}
+
+        reply = result.reply.rstrip()
+        if not reply.endswith("?"):
+            all_fields = {**safe_fields, **field_updates}
+            nq = next_question(all_fields)
+            reply = reply + " " + (nq if nq else completion_msg)
+
+        return ChatResponse(reply=reply, field_updates=field_updates)
+
+    else:
+        # ── Generic document: config-driven code path ─────────────────────────
+        config = DOCUMENT_CONFIGS.get(doc_type)
+        if not config:
+            raise HTTPException(status_code=400, detail=f"Unknown document type: {doc_type}")
+
+        system_prompt = GENERIC_SYSTEM_PROMPT_TEMPLATE.format(
+            doc_name=config.name,
+            system_context=config.system_context,
         )
-        raw = response.choices[0].message.content.strip()
-        # Strip markdown code fences if the model wraps JSON in ```json ... ```
-        if raw.startswith("```"):
-            parts = raw.split("```")
-            raw = parts[1].lstrip("json").strip() if len(parts) > 1 else raw
-        result = LLMResponse.model_validate_json(raw)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"AI service error: {str(e)}")
+        completion_msg = f"Your {config.name} is complete — you can now download the PDF!"
 
-    # Only return non-null field updates
-    field_updates = {k: v for k, v in result.field_updates.model_dump().items() if v is not None}
+        llm_messages = [
+            {"role": "system", "content": system_prompt},
+            {
+                "role": "system",
+                "content": (
+                    f"Current {config.name} field values (already filled in — do not re-ask "
+                    "for these unless the user wants to change them):\n"
+                    + json.dumps(safe_fields, indent=2)
+                ),
+            },
+        ] + [{"role": m.role, "content": m.content} for m in body.messages[-20:]]
 
-    # Guarantee the reply always ends with the next question.
-    # The LLM handles natural language understanding; we handle flow control.
-    reply = result.reply.rstrip()
-    if not reply.endswith("?"):
-        all_fields = {**safe_fields, **field_updates}
-        nq = next_question(all_fields)
-        if nq:
-            reply = reply + " " + nq
-        else:
-            reply = reply + " Your NDA is complete — you can now download the PDF!"
+        try:
+            response = completion(
+                model=MODEL,
+                messages=llm_messages,
+                response_format=config.llm_response_model,
+                extra_body=EXTRA_BODY,
+                api_key=api_key,
+            )
+            raw = response.choices[0].message.content.strip()
+            if raw.startswith("```"):
+                parts = raw.split("```")
+                raw = parts[1].lstrip("json").strip() if len(parts) > 1 else raw
+            result = config.llm_response_model.model_validate_json(raw)
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"AI service error: {str(e)}")
 
-    return ChatResponse(reply=reply, field_updates=field_updates)
+        field_updates = {k: v for k, v in result.field_updates.model_dump().items() if v is not None}
+
+        reply = result.reply.rstrip()
+        if not reply.endswith("?"):
+            all_fields = {**safe_fields, **field_updates}
+            nq = next_question_for_doc(all_fields, config.field_questions)
+            reply = reply + " " + (nq if nq else completion_msg)
+
+        return ChatResponse(reply=reply, field_updates=field_updates)

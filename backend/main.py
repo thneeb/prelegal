@@ -3,14 +3,15 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 
+from auth import get_current_user, router as auth_router
 from chat import router as chat_router
 from database import init_db
+from history import router as history_router
+from selection import router as selection_router
 
 load_dotenv()
 
@@ -30,18 +31,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(chat_router)
-
-
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-
-@app.post("/api/login")
-async def login(body: LoginRequest):
-    # Fake authentication — any credentials are accepted
-    return JSONResponse({"ok": True, "email": body.email})
+app.include_router(auth_router)
+app.include_router(history_router)
+app.include_router(chat_router, dependencies=[Depends(get_current_user)])
+app.include_router(selection_router, dependencies=[Depends(get_current_user)])
 
 
 @app.get("/api/health")

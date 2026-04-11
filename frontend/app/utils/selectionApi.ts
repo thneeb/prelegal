@@ -1,24 +1,18 @@
 import { ChatMessage } from "../types/nda";
 import { clearAuth, getAuthHeaders } from "./authUtils";
 
-export interface ChatApiResponse {
+export interface SelectionApiResponse {
   reply: string;
-  field_updates: Record<string, string>;
+  selected_document: string | null;
 }
 
-export async function sendChatMessage(
-  messages: ChatMessage[],
-  currentFields: Record<string, string>,
-  documentType: string = "mnda"
-): Promise<ChatApiResponse> {
-  const res = await fetch("/api/chat", {
+export async function sendSelectionMessage(
+  messages: ChatMessage[]
+): Promise<SelectionApiResponse> {
+  const res = await fetch("/api/select-document", {
     method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({
-      messages,
-      current_fields: currentFields,
-      document_type: documentType,
-    }),
+    body: JSON.stringify({ messages }),
   });
 
   if (res.status === 401) {

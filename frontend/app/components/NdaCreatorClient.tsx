@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { NdaFormData, defaultFormData } from "../types/nda";
 import { buildFullDocument, loadTemplate } from "../utils/templateUtils";
+import { clearAuth } from "../utils/authUtils";
+import { saveDocument } from "../utils/historyApi";
 import NdaChat from "./NdaChat";
 import NdaForm from "./NdaForm";
 import NdaPreview from "./NdaPreview";
@@ -11,9 +13,13 @@ import TabSwitcher from "./TabSwitcher";
 
 const PDF_MARGIN = 36; // pt (0.5 inch)
 
-export default function NdaCreatorClient() {
+interface Props {
+  initialFormData?: Partial<NdaFormData>;
+}
+
+export default function NdaCreatorClient({ initialFormData }: Props = {}) {
   const router = useRouter();
-  const [formData, setFormData] = useState<NdaFormData>(defaultFormData);
+  const [formData, setFormData] = useState<NdaFormData>({ ...defaultFormData, ...initialFormData });
   const [standardTermsRaw, setStandardTermsRaw] = useState<string>("");
   const [markdown, setMarkdown] = useState<string>("");
   const [downloading, setDownloading] = useState(false);
@@ -22,8 +28,13 @@ export default function NdaCreatorClient() {
   const standardTermsRef = useRef<HTMLDivElement>(null);
 
   function handleLogout() {
-    localStorage.removeItem("prelegal_user");
+    clearAuth();
     router.replace("/login/");
+  }
+
+  function handleBack() {
+    localStorage.removeItem("prelegal_selected_doc");
+    router.push("/");
   }
 
   useEffect(() => {
@@ -79,6 +90,11 @@ export default function NdaCreatorClient() {
         .replace(/_+/g, "_");
 
       pdf.save(filename);
+
+      // Save to history (fire-and-forget)
+      const { party1Signature: _s1, party2Signature: _s2, ...historyFields } = formData;
+      const docName = `Mutual Non-Disclosure Agreement: ${party1} / ${party2}`;
+      saveDocument("mnda", docName, historyFields as Record<string, string>).catch(console.error);
     } catch (err) {
       console.error("PDF generation failed:", err);
       alert("PDF generation failed. Please try again.");
@@ -92,18 +108,37 @@ export default function NdaCreatorClient() {
       {/* Left panel */}
       <aside className="w-96 min-w-80 flex-shrink-0 flex flex-col bg-white shadow-lg border-r border-gray-200 z-10">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-200 bg-blue-900 flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-white">Mutual NDA Creator</h1>
-            <p className="text-xs text-blue-200 mt-0.5">Chat with AI to fill your NDA</p>
+        <div className="px-5 py-4 border-b border-gray-200 flex items-start justify-between" style={{ backgroundColor: "#032147" }}>
+          <div className="flex-1 min-w-0 mr-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="text-blue-300 hover:text-white transition-colors text-xs"
+                title="Back to document selection"
+              >
+                ← Back
+              </button>
+            </div>
+            <h1 className="text-sm font-bold text-white mt-1 leading-tight">Mutual Non-Disclosure Agreement</h1>
+            <p className="text-xs mt-0.5" style={{ color: "#ecad0a" }}>Chat with AI to fill your NDA</p>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="text-xs text-blue-300 hover:text-white transition-colors"
-          >
-            Log out
-          </button>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => router.push("/history/")}
+              className="text-xs text-blue-300 hover:text-white transition-colors"
+            >
+              History
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="text-xs text-blue-300 hover:text-white transition-colors"
+            >
+              Log out
+            </button>
+          </div>
         </div>
 
         {/* Tab switcher */}

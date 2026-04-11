@@ -1,4 +1,5 @@
 import { NdaFormData } from "../types/nda";
+import { DocumentConfig } from "../document_configs";
 
 // Read the raw template files (bundled at build time via public/ folder)
 export async function loadTemplate(filename: string): Promise<string> {
@@ -13,11 +14,13 @@ function sanitizeYears(val: string, fallback = "1"): string {
   return Number.isFinite(n) && n > 0 ? String(n) : fallback;
 }
 
-function formatDate(iso: string): string {
+export function formatDate(iso: string): string {
   if (!iso) return "[Date]";
   const d = new Date(iso + "T00:00:00");
   return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 }
+
+// ─── MNDA-specific (existing behaviour preserved) ────────────────────────────
 
 /**
  * Build the filled cover page markdown from the template and form data.
@@ -94,7 +97,6 @@ export function fillStandardTerms(raw: string, data: NdaFormData): string {
   let result = raw;
 
   // Replace <span class="coverpage_link">FieldName</span> with actual values
-  // Use [\s\S]*? to handle multi-line spans and content containing special characters
   result = result.replace(
     /<span class="coverpage_link">([\s\S]+?)<\/span>/g,
     (_, field) => replacements[field.trim()] ?? field.trim()
@@ -115,4 +117,135 @@ export function buildFullDocument(standardTermsRaw: string, data: NdaFormData): 
   const standardTerms = fillStandardTerms(standardTermsRaw, data);
   // coverPage already ends with "---\n"; standardTerms already starts with "# Standard Terms"
   return coverPage + "\n" + standardTerms;
+}
+
+// ─── Generic document support ────────────────────────────────────────────────
+
+export type GenericFormData = Record<string, string>;
+
+/**
+ * Build a generic cover page for any non-MNDA document.
+ */
+export function buildGenericCoverPage(
+  data: GenericFormData,
+  config: DocumentConfig
+): string {
+  const p1Company = data.party1Company || `[${config.party1Label} Name]`;
+  const p1Name = data.party1Name || "";
+  const p1Title = data.party1Title || "";
+  const p1Address = data.party1NoticeAddress || "";
+  const p1Date = data.party1Date ? formatDate(data.party1Date) : "[Date]";
+
+  const p2Company = data.party2Company || `[${config.party2Label} Name]`;
+  const p2Name = data.party2Name || "";
+  const p2Title = data.party2Title || "";
+  const p2Address = data.party2NoticeAddress || "";
+  const p2Date = data.party2Date ? formatDate(data.party2Date) : "[Date]";
+
+  // Build key terms section from non-party fields
+  const keyTermLines = config.keyTermFields
+    .filter((f) => data[f])
+    .map((f) => {
+      const label = config.templateFields.find((tf) => tf.field === f)?.placeholder ?? f;
+      const value = f.toLowerCase().includes("date") ? formatDate(data[f]) : data[f];
+      return `**${label}:** ${value}`;
+    });
+
+  const keyTermsSection =
+    keyTermLines.length > 0
+      ? `### Key Terms\n\n${keyTermLines.join("\n\n")}\n\n`
+      : "";
+
+  const modificationsSection = data.modifications
+    ? `### Modifications\n\n${data.modifications}\n\n`
+    : "";
+
+  const partyBlock = (
+    label: string,
+    company: string,
+    name: string,
+    title: string,
+    address: string,
+    date: string
+  ) => `**${label}:** ${company}
+
+${name ? `**Signed by:** ${name}` : ""}${title ? ` (${title})` : ""}
+
+${address ? `**Notice address:** ${address}\n\n` : ""}**Date:** ${date}`;
+
+  return `# ${config.name}
+
+${keyTermsSection}${modificationsSection}By signing below, each party agrees to the terms of this ${config.name}.
+
+---
+
+${partyBlock(config.party1Label, p1Company, p1Name, p1Title, p1Address, p1Date)}
+
+---
+
+${partyBlock(config.party2Label, p2Company, p2Name, p2Title, p2Address, p2Date)}
+
+---
+`;
+}
+
+/**
+ * Fill all placeholder spans in a generic document template.
+ * Handles coverpage_link, keyterms_link, orderform_link, businessterms_link, sow_link.
+ */
+export function fillGenericTemplate(
+  raw: string,
+  data: GenericFormData,
+  config: DocumentConfig
+): string {
+  // Build a map from placeholder display text → field value for all template fields
+  const replacements: Record<string, string> = {};
+  for (const tf of config.templateFields) {
+    if (tf.placeholder && tf.placeholderClass) {
+      const value = data[tf.field];
+      if (value) {
+        // Format dates automatically
+        const isDateField =
+          tf.field.toLowerCase().includes("date") ||
+          tf.placeholder.toLowerCase().includes("date") ||
+          tf.placeholder.toLowerCase().includes("period") ||
+          tf.field === "term";
+        replacements[tf.placeholder] = isDateField && value.match(/^\d{4}-\d{2}-\d{2}$/)
+          ? formatDate(value)
+          : value;
+      }
+    }
+  }
+
+  let result = raw;
+
+  // Replace all span placeholder classes
+  const allClasses = ["coverpage_link", "keyterms_link", "orderform_link", "businessterms_link", "sow_link"];
+  for (const cls of allClasses) {
+    // Use a literal regex-style pattern; escape the class name for safety
+    const pattern = new RegExp(`<span class="${cls}">([\\s\\S]+?)<\\/span>`, "g");
+    result = result.replace(pattern, (_, field) => replacements[field.trim()] ?? field.trim());
+  }
+
+  // Remove remaining span tags, keep text content
+  result = result.replace(/<span[\s\S]*?>([\s\S]*?)<\/span>/g, "$1");
+  result = result.replace(/<label>[\s\S]*?<\/label>/g, "");
+
+  return result;
+}
+
+/**
+ * Build the complete generic document as two separate sections.
+ * Returns { coverPage, standardTerms } so callers can render them
+ * as separate preview sections (enabling page-break PDF generation).
+ */
+export function buildGenericDocument(
+  standardTermsRaw: string,
+  data: GenericFormData,
+  config: DocumentConfig
+): { coverPage: string; standardTerms: string } {
+  return {
+    coverPage: buildGenericCoverPage(data, config),
+    standardTerms: fillGenericTemplate(standardTermsRaw, data, config),
+  };
 }
