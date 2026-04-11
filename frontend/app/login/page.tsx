@@ -11,9 +11,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated()) router.replace("/");
+    if (isAuthenticated()) {
+      router.replace("/");
+    } else {
+      setReady(true);
+    }
   }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -39,6 +44,8 @@ export default function LoginPage() {
       setLoading(false);
     }
   }
+
+  if (!ready) return null;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
